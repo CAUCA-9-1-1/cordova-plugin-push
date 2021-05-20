@@ -1,5 +1,5 @@
 {
-  "name": "@havesource/cordova-plugin-push",
+  "name": "@mickjol/cordova-plugin-push",
   "version": "2.0.1-dev.0",
   "description": "Register and receive push notifications.",
   "scripts": {
@@ -11,7 +11,7 @@
     "precommit-msg": "echo 'Pre-commit checks...' && exit 0",
     "test": "npm run build && npm run lint && npm run jasmine"
   },
-  "repository": "github:havesource/cordova-plugin-push",
+  "repository": "github:mickjol/cordova-plugin-push",
   "keywords": [
     "ecosystem:cordova",
     "cordova-ios",
@@ -21,8 +21,8 @@
   ],
   "author": "Erisu",
   "license": "MIT",
-  "bugs": "https://github.com/havesource/cordova-plugin-push/issues",
-  "homepage": "https://github.com/havesource/cordova-plugin-push#readme",
+  "bugs": "https://github.com/mickjol/cordova-plugin-push/issues",
+  "homepage": "https://github.com/mickjol/cordova-plugin-push#readme",
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/core": "^7.12.10",
@@ -52,7 +52,7 @@
   },
   "types": "./types/index.d.ts",
   "cordova": {
-    "id": "@havesource/cordova-plugin-push",
+    "id": "@mickjol/cordova-plugin-push",
     "platforms": [
       "ios",
       "android",
