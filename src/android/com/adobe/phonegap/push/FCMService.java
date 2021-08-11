@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -23,9 +24,11 @@ import android.graphics.Canvas;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationCompat.WearableExtender;
-import android.support.v4.app.RemoteInput;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationCompat.WearableExtender;
+import androidx.core.app.RemoteInput;
+
+import android.provider.Settings;
 import android.text.Html;
 import android.text.Spanned;
 import android.util.Log;
@@ -36,6 +39,8 @@ import com.google.firebase.messaging.RemoteMessage;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +52,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.security.SecureRandom;
+
+import ca.cauca.survimobile.R;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 @SuppressLint("NewApi")
 public class FCMService extends FirebaseMessagingService implements PushConstants {
@@ -129,6 +141,8 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         showNotificationIfPossible(applicationContext, extras);
       }
     }
+
+    sendAcknowledge(extras);
   }
 
   /*
@@ -1061,5 +1075,72 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     Log.d(LOG_TAG, "sender id = " + savedSenderID);
 
     return from.equals(savedSenderID) || from.startsWith("/topics/");
+  }
+
+  private void sendAcknowledge(Bundle notificationBundle){
+    String acknowledgeUrl = getApiUrl();
+    if(!acknowledgeUrl.isEmpty()){
+
+      String interventionId = notificationBundle.get("interventionId").toString();
+      String deviceId = getDeviceId();
+
+      if(!interventionId.isEmpty() && !interventionId.isEmpty())
+          postAcknowledge(acknowledgeUrl, deviceId, interventionId);
+    }
+  }
+
+  private String getApiUrl() {
+    String url = "";
+    try {
+      Context myContext = getApplicationContext();
+      Resources res = myContext.getResources();
+      boolean found = false;
+      XmlResourceParser parser = res.getXml(R.xml.config);
+      int eventType = parser.getEventType();
+      while (eventType != XmlPullParser.END_DOCUMENT && !found) {
+        if("ApiAcknowledgeUrl".equals(parser.getAttributeValue(null, "name"))){
+          url = parser.getAttributeValue(null, "value");
+          found = true;
+        }
+        eventType = parser.next();
+      }
+    } catch (XmlPullParserException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return url;
+  }
+
+  private String getDeviceId(){
+    return Settings.Secure.getString(getContentResolver(),
+            Settings.Secure.ANDROID_ID);
+  }
+
+  private void postAcknowledge(String apiUrl, String deviceId, String interventionId){
+    OkHttpClient httpClient = new OkHttpClient();
+    MediaType JSON
+            = MediaType.parse("application/json; charset=utf-8");
+    try {
+      JSONObject body = new JSONObject();
+      body.put("deviceId", deviceId);
+      body.put("origin", "native android");
+      body.put("interventionId", interventionId);
+
+      RequestBody JSonBody = RequestBody.create(JSON, body.toString());
+
+      Request request = new Request.Builder()
+              .url(apiUrl)
+              .post(JSonBody)
+              .build();
+
+      try (Response response = httpClient.newCall(request).execute()) {
+        if (!response.isSuccessful())
+          Log.e("Unexpected code", "exception ex= " + response);
+      }
+    }
+    catch(Exception e){
+      Log.e("notification_ack", "exception ex= " + e.getMessage());
+    }
   }
 }
