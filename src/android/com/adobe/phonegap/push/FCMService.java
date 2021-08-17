@@ -53,12 +53,12 @@ import java.util.List;
 import java.util.Map;
 import java.security.SecureRandom;
 
-import ca.cauca.survimobile.R;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import ca.cauca.survimobile.v3.R;
 
 @SuppressLint("NewApi")
 public class FCMService extends FirebaseMessagingService implements PushConstants {
@@ -1084,7 +1084,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       String interventionId = notificationBundle.get("interventionId").toString();
       String deviceId = getDeviceId();
 
-      if(!interventionId.isEmpty() && !interventionId.isEmpty())
+      if(!interventionId.isEmpty())
           postAcknowledge(acknowledgeUrl, deviceId, interventionId);
     }
   }

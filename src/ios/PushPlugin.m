@@ -28,6 +28,7 @@
 
 #import "PushPlugin.h"
 #import "AppDelegate+notification.h"
+#import "XMLReader.h"
 
 @import Firebase;
 @import FirebaseCore;
@@ -497,6 +498,8 @@
 
         self.coldstart = NO;
         self.notificationMessage = nil;
+
+        [self sendAcknowledge:additionalData];
     }
 }
 
@@ -587,6 +590,73 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
 }
 
+-(void)sendAcknowledge:(NSMutableDictionary *)notificationBundle;
+{
+    NSString* acknowledgeUrl = [self getApiUrl];
+    if ([acknowledgeUrl length] > 0) {
+        NSString* interventionId = [notificationBundle objectForKey:@"interventionId"];
+        NSString* deviceId = [self getDeviceId];
+
+        if([interventionId length] > 0) {
+            [self postAcknowledge:acknowledgeUrl :deviceId :interventionId];
+        }
+    }
+}
+
+-(NSString *)getApiUrl
+{
+    NSString* url = @"";
+    NSError *error = nil;
+    NSString *path=[[NSBundle mainBundle] pathForResource:@"config" ofType:@"xml"];
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    NSString *s = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    NSDictionary *_xmlDictionary = [XMLReader dictionaryForXMLString:s error:&error];
+    prefsArray = [[_xmlDictionary objectForKey:@"widget"] objectForKey:@"preference"];
+    
+    for (id pref in prefsArray) {
+        if ([pref[@"@name"] isEqualToString:@"ApiAcknowledgeUrl"]) {
+            url = pref[@"@value"];
+        }
+    }
+    
+    return url;
+}
+
+-(NSString *)getDeviceId
+{
+    NSString* uniqueIdentifier = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    return uniqueIdentifier;
+}
+
+-(void) postAcknowledge:(NSString *)apiUrl :(NSString *)deviceId :(NSString *)interventionId;
+{
+    NSDictionary *jsonBodyDict = @{
+        @"deviceId": deviceId,
+        @"origin": @"native ios",
+        @"interventionId": (interventionId ?: [NSNull null])
+    };
+    NSData *jsonBodyData = [NSJSONSerialization dataWithJSONObject:jsonBodyDict options:kNilOptions error:nil];
+    NSMutableURLRequest *request = [NSMutableURLRequest new];
+    request.HTTPMethod = @"POST";
+
+    [request setURL:[NSURL URLWithString:apiUrl]];
+    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [request setHTTPBody:jsonBodyData];
+
+    NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:nil delegateQueue:[NSOperationQueue mainQueue]];
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                        completionHandler:^(NSData * _Nullable data,
+                        NSURLResponse * _Nullable response,
+                        NSError * _Nullable error) {
+        NSHTTPURLResponse *asHTTPResponse = (NSHTTPURLResponse *) response;
+        if (asHTTPResponse.statusCode != 204) {
+            NSLog(@"Unexpected code, exception ex= %ld", asHTTPResponse.statusCode);
+        }
+    }];
+    [task resume];
+}
 
 -(void)failWithMessage:(NSString *)myCallbackId withMsg:(NSString *)message withError:(NSError *)error
 {

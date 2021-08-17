@@ -40,6 +40,7 @@
     BOOL    clearBadge;
 
     NSMutableDictionary *handlerObj;
+    NSMutableArray *prefsArray;
     void (^completionHandler)(UIBackgroundFetchResult);
 
     BOOL ready;
@@ -66,6 +67,10 @@
 
 - (void)setNotificationMessage:(NSDictionary *)notification;
 - (void)notificationReceived;
+- (void)sendAcknowledge:(NSMutableDictionary *)notificationBundle;
+- (NSString *)getApiUrl;
+- (NSString *)getDeviceId;
+- (void)postAcknowledge:(NSString *)apiUrl deviceId:(NSString *)deviceId interventionId:(NSString *)interventionId;
 
 - (void)willSendDataMessageWithID:(NSString *)messageID error:(NSError *)error;
 - (void)didSendDataMessageWithID:(NSString *)messageID;
