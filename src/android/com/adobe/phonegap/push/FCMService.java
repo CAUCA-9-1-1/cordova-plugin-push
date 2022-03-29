@@ -1119,12 +1119,12 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
             Settings.Secure.ANDROID_ID);
   }
 
-  private void postAcknowledge(String apiUrl, JSONObject acknowledge){
+  private void postAcknowledge(String apiUrl, JSONObject acknowledgeData){
     OkHttpClient httpClient = new OkHttpClient();
     MediaType JSON
             = MediaType.parse("application/json; charset=utf-8");
     try {
-      RequestBody JSonBody = RequestBody.create(JSON, acknowledge.toString());
+      RequestBody JSonBody = RequestBody.create(JSON, acknowledgeData.toString());
 
       Request request = new Request.Builder()
               .url(apiUrl)
