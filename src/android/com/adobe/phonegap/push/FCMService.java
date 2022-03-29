@@ -1081,11 +1081,13 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     String acknowledgeUrl = getApiUrl();
     if(!acknowledgeUrl.isEmpty()){
 
-      String interventionId = notificationBundle.get("interventionId").toString();
-      String deviceId = getDeviceId();
+      JSONObject acknowledgeData = new JSONObject();
+      acknowledgeData.put("deviceId", getDeviceId());
+      acknowledgeData.put("interventionId", notificationBundle.get("interventionId").toString());
+      acknowledgeData.put("notificationLogId", notificationBundle.get("notificationLogId").toString());
+      acknowledgeData.put("origin", "native android");
 
-      if(!interventionId.isEmpty())
-          postAcknowledge(acknowledgeUrl, deviceId, interventionId);
+      postAcknowledge(acknowledgeUrl, acknowledgeData);
     }
   }
 
@@ -1117,17 +1119,12 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
             Settings.Secure.ANDROID_ID);
   }
 
-  private void postAcknowledge(String apiUrl, String deviceId, String interventionId){
+  private void postAcknowledge(String apiUrl, JSONObject acknowledge){
     OkHttpClient httpClient = new OkHttpClient();
     MediaType JSON
             = MediaType.parse("application/json; charset=utf-8");
     try {
-      JSONObject body = new JSONObject();
-      body.put("deviceId", deviceId);
-      body.put("origin", "native android");
-      body.put("interventionId", interventionId);
-
-      RequestBody JSonBody = RequestBody.create(JSON, body.toString());
+      RequestBody JSonBody = RequestBody.create(JSON, acknowledge.toString());
 
       Request request = new Request.Builder()
               .url(apiUrl)

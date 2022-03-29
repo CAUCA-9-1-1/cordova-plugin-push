@@ -602,11 +602,17 @@
     NSString* acknowledgeUrl = [self getApiUrl];
     if ([acknowledgeUrl length] > 0) {
         NSString* interventionId = [notificationBundle objectForKey:@"interventionId"];
+        NSString* notificationLogId = [notificationBundle objectForKey:@"notificationLogId"];
         NSString* deviceId = [self getDeviceId];
 
-        if([interventionId length] > 0) {
-            [self postAcknowledge:acknowledgeUrl :deviceId :interventionId];
-        }
+        NSDictionary *acknowledgeData = @{
+            @"deviceId": deviceId,
+            @"origin": @"native ios",
+            @"interventionId": (interventionId ?: [NSNull null]),
+            @"notificationLogId": (notificationLogId ?: [NSNull null])
+        };
+
+        [self postAcknowledge:acknowledgeUrl :acknowledgeData];
     }
 }
 
@@ -635,14 +641,9 @@
     return uniqueIdentifier;
 }
 
--(void) postAcknowledge:(NSString *)apiUrl :(NSString *)deviceId :(NSString *)interventionId;
+-(void) postAcknowledge:(NSString *)apiUrl :(NSDictionary *)acknowledgeData;
 {
-    NSDictionary *jsonBodyDict = @{
-        @"deviceId": deviceId,
-        @"origin": @"native ios",
-        @"interventionId": (interventionId ?: [NSNull null])
-    };
-    NSData *jsonBodyData = [NSJSONSerialization dataWithJSONObject:jsonBodyDict options:kNilOptions error:nil];
+    NSData *jsonBodyData = [NSJSONSerialization dataWithJSONObject:acknowledgeData options:kNilOptions error:nil];
     NSMutableURLRequest *request = [NSMutableURLRequest new];
     request.HTTPMethod = @"POST";
 
