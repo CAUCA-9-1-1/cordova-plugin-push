@@ -637,8 +637,27 @@
 
 -(NSString *)getDeviceId
 {
-    NSString* uniqueIdentifier = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
-    return uniqueIdentifier;
+    NSUserDefaults* userDefaults = [NSUserDefaults standardUserDefaults];
+    static NSString* UUID_KEY = @"CDVUUID";
+    UIDevice* device = [UIDevice currentDevice];
+    
+    // Check user defaults first to maintain backwards compaitibility with previous versions
+    // which didn't user identifierForVendor
+    NSString* app_uuid = [userDefaults stringForKey:UUID_KEY];
+    if (app_uuid == nil) {
+        if ([device respondsToSelector:@selector(identifierForVendor)]) {
+            app_uuid = [[device identifierForVendor] UUIDString];
+        } else {
+            CFUUIDRef uuid = CFUUIDCreate(NULL);
+            app_uuid = (__bridge_transfer NSString *)CFUUIDCreateString(NULL, uuid);
+            CFRelease(uuid);
+        }
+
+        [userDefaults setObject:app_uuid forKey:UUID_KEY];
+        [userDefaults synchronize];
+    }
+    
+    return app_uuid;
 }
 
 -(void) postAcknowledge:(NSString *)apiUrl :(NSDictionary *)acknowledgeData;
