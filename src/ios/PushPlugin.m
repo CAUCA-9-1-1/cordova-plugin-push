@@ -637,8 +637,15 @@
 
 -(NSString *)getDeviceId
 {
-    NSString* uniqueIdentifier = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
-    return uniqueIdentifier;
+    NSString *appName=[[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
+
+    NSString *strApplicationUUID = [SSKeychain passwordForService:appName account:@"incoding"];
+    if (strApplicationUUID == nil)
+    {
+        strApplicationUUID  = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+        [SSKeychain setPassword:strApplicationUUID forService:appName account:@"incoding"];
+    }
+    return strApplicationUUID;
 }
 
 -(void) postAcknowledge:(NSString *)apiUrl :(NSDictionary *)acknowledgeData;
