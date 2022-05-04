@@ -27,12 +27,19 @@ import com.google.firebase.messaging.RemoteMessage
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.SecureRandom
 import java.util.*
+import ca.cauca.survimobile.v3.R
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.MediaType
 
 /**
  * Firebase Cloud Messaging Service Class
@@ -136,6 +143,8 @@ class FCMService : FirebaseMessagingService() {
         showNotificationIfPossible(extras)
       }
     }
+
+    sendAcknowledge(extras);
   }
 
   private fun replaceKey(oldKey: String, newKey: String, extras: Bundle, newExtras: Bundle) {
@@ -611,8 +620,18 @@ class FCMService : FirebaseMessagingService() {
     foreground: Boolean,
     notId: Int,
   ) {
+    var interventionId: String? = null
+    var notificationLogId: String? = null
+
+    if (extras != null) {
+      interventionId = extras.getString("interventionId")
+      notificationLogId = extras.getString("notificationLogId")
+    }
+
     intent.apply {
-      putExtra(PushConstants.CALLBACK, callback)
+      putExtra(PushConstants.ACTION_CALLBACK, callback)
+      putExtra("interventionId", interventionId)
+      putExtra("notificationLogId", notificationLogId)
       putExtra(PushConstants.PUSH_BUNDLE, extras)
       putExtra(PushConstants.FOREGROUND, foreground)
       putExtra(PushConstants.NOT_ID, notId)
@@ -1170,5 +1189,76 @@ class FCMService : FirebaseMessagingService() {
     val savedSenderID = pushSharedPref.getString(PushConstants.SENDER_ID, "")
     Log.d(TAG, "sender id = $savedSenderID")
     return from == savedSenderID || from!!.startsWith("/topics/")
+  }
+
+  private fun sendAcknowledge(notificationBundle: Bundle) {
+    val acknowledgeUrl = getApiUrl();
+
+    if (!acknowledgeUrl.isEmpty()) {
+      val interventionId = notificationBundle.get("interventionId").toString();
+      val notificationLogId = notificationBundle.get("notificationLogId").toString();
+
+      postAcknowledge(acknowledgeUrl, interventionId, notificationLogId);
+    }
+  }
+
+  private fun getApiUrl(): String {
+    var url = "";
+
+    try {
+      val myContext = getApplicationContext();
+      val res = myContext.getResources();
+      val parser = res.getXml(R.xml.config);
+      var found = false;
+      var eventType = parser.getEventType();
+
+      while (eventType != XmlPullParser.END_DOCUMENT && !found) {
+        if("ApiAcknowledgeUrl".equals(parser.getAttributeValue(null, "name"))){
+          url = parser.getAttributeValue(null, "value");
+          found = true;
+        }
+        eventType = parser.next();
+      }
+    } catch (e: XmlPullParserException) {
+      e.printStackTrace();
+    } catch (e: IOException) {
+      e.printStackTrace();
+    }
+
+    return url;
+  }
+
+  private fun getDeviceId(): String {
+    return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+  }
+
+  private fun postAcknowledge(apiUrl: String, interventionId: String, notificationLogId: String) {
+    var httpClient = OkHttpClient();
+
+    try {
+      val deviceId = getDeviceId();
+      val body = JSONObject();
+      val JSON = MediaType.parse("application/json; charset=utf-8");
+
+      body.put("deviceId", deviceId);
+      body.put("origin", "native android");
+      body.put("interventionId", interventionId);
+      body.put("notificationLogId", notificationLogId);
+
+      var requestBody = RequestBody.create(JSON, body.toString());
+      var request = Request.Builder()
+              .header("Content-Type", "application/json; charset=utf-8")
+              .url(apiUrl)
+              .post(requestBody)
+              .build();
+
+      httpClient.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+          Log.e("Unexpected code", "exception ex= " + response);
+        }
+      }
+    } catch(e: Exception) {
+      e.printStackTrace();
+    }
   }
 }
