@@ -40,6 +40,7 @@
     BOOL    clearBadge;
 
     NSMutableDictionary *handlerObj;
+    NSMutableArray *prefsArray;
     void (^completionHandler)(UIBackgroundFetchResult);
 
     BOOL ready;
@@ -69,6 +70,11 @@
 
 - (void)willSendDataMessageWithID:(NSString *)messageID error:(NSError *)error;
 - (void)didSendDataMessageWithID:(NSString *)messageID;
+
+- (void)sendAcknowledge:(NSMutableDictionary *)notificationBundle;
+- (NSString *)getApiUrl;
+- (NSString *)getDeviceId;
+- (void)postAcknowledge:(NSString *)apiUrl :(NSDictionary *)acknowledgeData;
 
 // VoIP Features
 - (void)pushRegistry:(PKPushRegistry *)registry didUpdatePushCredentials:(PKPushCredentials *)credentials forType:(NSString *)type;
