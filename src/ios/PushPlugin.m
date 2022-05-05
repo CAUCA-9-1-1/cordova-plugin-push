@@ -28,6 +28,7 @@
 
 #import "PushPlugin.h"
 #import "AppDelegate+notification.h"
+#import "XMLReader.h"
 
 @import Firebase;
 @import FirebaseCore;
@@ -497,7 +498,97 @@
 
         self.coldstart = NO;
         self.notificationMessage = nil;
+
+        [self sendAcknowledge:additionalData];
     }
+}
+
+-(void)sendAcknowledge:(NSMutableDictionary *)notificationBundle;
+{
+    NSString* acknowledgeUrl = [self getApiUrl];
+    if ([acknowledgeUrl length] > 0) {
+        NSString* interventionId = [notificationBundle objectForKey:@"interventionId"];
+        NSString* notificationLogId = [notificationBundle objectForKey:@"notificationLogId"];
+        NSString* deviceId = [self getDeviceId];
+
+        NSDictionary *acknowledgeData = @{
+            @"deviceId": deviceId,
+            @"origin": @"native ios",
+            @"interventionId": (interventionId ?: [NSNull null]),
+            @"notificationLogId": (notificationLogId ?: [NSNull null])
+        };
+
+        [self postAcknowledge:acknowledgeUrl :acknowledgeData];
+    }
+}
+
+-(NSString *)getApiUrl
+{
+    NSString* url = @"";
+    NSError *error = nil;
+    NSString *path=[[NSBundle mainBundle] pathForResource:@"config" ofType:@"xml"];
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    NSString *s = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    NSDictionary *_xmlDictionary = [XMLReader dictionaryForXMLString:s error:&error];
+    prefsArray = [[_xmlDictionary objectForKey:@"widget"] objectForKey:@"preference"];
+
+    for (id pref in prefsArray) {
+        if ([pref[@"@name"] isEqualToString:@"ApiAcknowledgeUrl"]) {
+            url = pref[@"@value"];
+        }
+    }
+
+    return url;
+}
+
+-(NSString *)getDeviceId
+{
+    NSUserDefaults* userDefaults = [NSUserDefaults standardUserDefaults];
+    static NSString* UUID_KEY = @"CDVUUID";
+    UIDevice* device = [UIDevice currentDevice];
+
+    // Check user defaults first to maintain backwards compaitibility with previous versions
+    // which didn't user identifierForVendor
+    NSString* app_uuid = [userDefaults stringForKey:UUID_KEY];
+    if (app_uuid == nil) {
+        if ([device respondsToSelector:@selector(identifierForVendor)]) {
+            app_uuid = [[device identifierForVendor] UUIDString];
+        } else {
+            CFUUIDRef uuid = CFUUIDCreate(NULL);
+            app_uuid = (__bridge_transfer NSString *)CFUUIDCreateString(NULL, uuid);
+            CFRelease(uuid);
+        }
+
+        [userDefaults setObject:app_uuid forKey:UUID_KEY];
+        [userDefaults synchronize];
+    }
+
+    return app_uuid;
+}
+
+-(void) postAcknowledge:(NSString *)apiUrl :(NSDictionary *)acknowledgeData;
+{
+    NSData *jsonBodyData = [NSJSONSerialization dataWithJSONObject:acknowledgeData options:kNilOptions error:nil];
+    NSMutableURLRequest *request = [NSMutableURLRequest new];
+    request.HTTPMethod = @"POST";
+
+    [request setURL:[NSURL URLWithString:apiUrl]];
+    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    [request setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [request setHTTPBody:jsonBodyData];
+
+    NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:nil delegateQueue:[NSOperationQueue mainQueue]];
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                        completionHandler:^(NSData * _Nullable data,
+                        NSURLResponse * _Nullable response,
+                        NSError * _Nullable error) {
+        NSHTTPURLResponse *asHTTPResponse = (NSHTTPURLResponse *) response;
+        if (asHTTPResponse.statusCode != 204) {
+            NSLog(@"Unexpected code, exception ex= %ld", asHTTPResponse.statusCode);
+        }
+    }];
+    [task resume];
 }
 
 - (void)clearNotification:(CDVInvokedUrlCommand *)command
