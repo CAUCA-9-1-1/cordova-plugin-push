@@ -34,6 +34,7 @@
 @interface PushPlugin : CDVPlugin
 {
     NSDictionary *notificationMessage;
+    BOOL    areNotificationsEnabled;
     BOOL    isInline;
     NSString *notificationCallbackId;
     NSString *callback;
@@ -52,6 +53,7 @@
 
 @property (nonatomic, strong) NSDictionary *notificationMessage;
 @property BOOL isInline;
+@property BOOL areNotificationsEnabled;
 @property BOOL coldstart;
 @property BOOL clearBadge;
 @property (nonatomic, strong) NSMutableDictionary *handlerObj;
