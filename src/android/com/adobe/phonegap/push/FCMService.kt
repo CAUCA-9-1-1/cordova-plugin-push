@@ -1269,6 +1269,26 @@ class FCMService : FirebaseMessagingService() {
       body.put("interventionId", interventionId);
       body.put("notificationLogId", notificationLogId);
 
+      body.put("currentInterruptionFilter", if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) notificationManager.currentInterruptionFilter else null);
+      body.put("importance", if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) notificationManager.getImportance() else null);
+      body.put("areNotificationsEnabled", if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) notificationManager.areNotificationsEnabled() else null);
+      body.put("areNotificationsPaused", if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) notificationManager.areNotificationsPaused() else null);
+      body.put("canNotifyAsPackage", if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) notificationManager.canNotifyAsPackage(context.packageName) else null);
+      body.put("applicationIsActive", isActive);
+
+      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        var notificationPolicy = notificationManager.getNotificationPolicy();
+        var notificationPolicyValues = notificationPolicy.priorityCallSenders.toString() + " (priorityCallSenders), " + notificationPolicy.priorityCategories + " (priorityCategories)";
+
+        body.put("notificationPolicy", notificationPolicyValues);
+      }
+      if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        var consolidatedNotificationPolicy = notificationManager.getConsolidatedNotificationPolicy();
+        var consolidatedNotificationPolicyValues = consolidatedNotificationPolicy.priorityCallSenders.toString() + " (priorityCallSenders), " + consolidatedNotificationPolicy.priorityCategories + " (priorityCategories)";
+
+        body.put("consolidatedNotificationPolicy", consolidatedNotificationPolicyValues);
+      }
+
       var requestBody = RequestBody.create(JSON, body.toString());
       var request = Request.Builder()
               .header("Content-Type", "application/json; charset=utf-8")

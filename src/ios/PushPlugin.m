@@ -37,6 +37,7 @@
 
 @implementation PushPlugin : CDVPlugin
 
+@synthesize areNotificationsEnabled;
 @synthesize notificationMessage;
 @synthesize isInline;
 @synthesize coldstart;
@@ -481,19 +482,36 @@
 {
     NSString* acknowledgeUrl = [self getApiUrl];
     if ([acknowledgeUrl length] > 0) {
+        UIApplicationState applicationState = [[UIApplication sharedApplication] applicationState];
         NSString* interventionId = [notificationBundle objectForKey:@"interventionId"];
         NSString* notificationLogId = [notificationBundle objectForKey:@"notificationLogId"];
         NSString* deviceId = [self getDeviceId];
+        NSString* areNotificationsEnabled = self.areNotificationsEnabled == true ? @"true": @"false";
+        NSString* applicationIsActive = applicationState == UIApplicationStateActive ? @"true" : @"false";
 
         NSDictionary *acknowledgeData = @{
             @"deviceId": deviceId,
             @"origin": @"native ios",
             @"interventionId": (interventionId ?: [NSNull null]),
-            @"notificationLogId": (notificationLogId ?: [NSNull null])
+            @"notificationLogId": (notificationLogId ?: [NSNull null]),
+            @"areNotificationsEnabled": areNotificationsEnabled,
+            @"applicationIsActive": applicationIsActive
         };
 
         [self postAcknowledge:acknowledgeUrl :acknowledgeData];
     }
+}
+
+-(NSString *)getNotificationStatus
+{
+    let currentNotification = UNUserNotificationCenter.current()
+    NSString * status = "";
+
+    currentNotification.getNotificationSettings(completionHandler: { (permission) in
+        status = permission.authorizationStatus;
+    });
+
+    return status;
 }
 
 -(NSString *)getApiUrl
@@ -740,6 +758,7 @@
             case UNAuthorizationStatusNotDetermined:
             {
                 [weakCenter requestAuthorizationWithOptions:authorizationOptions completionHandler:^(BOOL granted, NSError * _Nullable error) {
+                    self.areNotificationsEnabled = granted;
                     if (granted) {
                         [self performSelectorOnMainThread:@selector(registerForRemoteNotifications)
                                                withObject:nil
@@ -750,6 +769,7 @@
             }
             case UNAuthorizationStatusAuthorized:
             {
+                self.areNotificationsEnabled = true;
                 [self performSelectorOnMainThread:@selector(registerForRemoteNotifications)
                                        withObject:nil
                                     waitUntilDone:NO];
@@ -757,6 +777,7 @@
             }
             case UNAuthorizationStatusDenied:
             default:
+                self.areNotificationsEnabled = false;
                 break;
         }
     }];
