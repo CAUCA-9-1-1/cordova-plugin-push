@@ -502,18 +502,6 @@
     }
 }
 
--(NSString *)getNotificationStatus
-{
-    let currentNotification = UNUserNotificationCenter.current()
-    NSString * status = "";
-
-    currentNotification.getNotificationSettings(completionHandler: { (permission) in
-        status = permission.authorizationStatus;
-    });
-
-    return status;
-}
-
 -(NSString *)getApiUrl
 {
     NSString* url = @"";
