@@ -1263,6 +1263,7 @@ class FCMService : FirebaseMessagingService() {
       val deviceId = getDeviceId();
       val body = JSONObject();
       val JSON = MediaType.parse("application/json; charset=utf-8");
+      val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager;
 
       body.put("deviceId", deviceId);
       body.put("origin", "native android");
